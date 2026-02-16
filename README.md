@@ -9,7 +9,7 @@ Login<br/>
 Email: dummy@demo.com<br/>
 Password: dummy1234<br/>
 
-Live: https://veloxdoc-ai.onrender.com
+Live: <a href="https://veloxdoc-ai.onrender.com">veloxdoc-ai.onrender.com</a>
 
 ## How it Works
 
