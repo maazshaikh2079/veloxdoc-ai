@@ -7,7 +7,8 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-const model = "gemini-2.5-flash";
+// const model = "gemini-2.5-flash";
+const model = "gemini-3-pro-preview";
 
 if (!process.env.GEMINI_API_KEY) {
   console.error(
