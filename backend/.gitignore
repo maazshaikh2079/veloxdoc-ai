@@ -1,5 +1,7 @@
 .env
+.env.local
 .vscode
+.vercel
 
 # Logs
 logs
@@ -23,3 +25,5 @@ node_modules
 *.njsproj
 *.sln
 *.sw?
+.vercel
+.env*.local

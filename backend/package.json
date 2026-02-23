@@ -12,8 +12,12 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "engines": {
+  "node": ">=16.x"
+  },
   "dependencies": {
     "@google/genai": "^1.38.0",
+    "@napi-rs/canvas": "^0.1.94",
     "axios": "^1.13.5",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^1.21.0",
