@@ -1,12 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-// import { DOMMatrix, ImageData, Path2D } from "canvas";
-
-// global.DOMMatrix = DOMMatrix;
-// global.ImageData = ImageData;
-// global.Path2D = Path2D;
-
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
