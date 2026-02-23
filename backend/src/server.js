@@ -17,19 +17,15 @@ import aiRouter from "./routes/ai.routes.js";
 import quizRouter from "./routes/quiz.routes.js";
 import progressRouter from "./routes/progress.routes.js";
 
-
 const app = express();
 
+// Ignore favicon requests
 app.get("/favicon.ico", (req, res) => res.status(204).end());
-app.use((req, res, next) => {
-  console.log(`Request received: ${req.method} ${req.url}`);
-  next();
-});
 
-// Disable buffering so queries fail if DB isn't connected
+// Disable buffering for Serverless cold starts
 mongoose.set("bufferCommands", false);
 
-// Database Middleware for Vercel cold starts
+// Database Connection Middleware
 let isConnected = false;
 app.use(async (req, res, next) => {
   if (isConnected || mongoose.connection.readyState === 1) {
@@ -49,9 +45,10 @@ app.use(async (req, res, next) => {
   }
 });
 
+// Middleware
 app.use(
   cors({
-    origin: "*",
+    origin: process.env.FRONTEND_URL || "*",
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -62,7 +59,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
-
 // API Routes
 app.use("/api/auth", authRouter);
 app.use("/api/documents", documentRouter);
@@ -71,14 +67,28 @@ app.use("/api/ai", aiRouter);
 app.use("/api/quizzes", quizRouter);
 app.use("/api/progress", progressRouter);
 
+// Health Check Route
+app.get("/", (req, res) => {
+  res.status(200).json({ status: "VeloxDoc AI API is running" });
+});
+
 // Error Handling
 app.use(errorHandler);
 
-// Local Listener (Only runs when NOT on Vercel)
+// API 404 Handler 
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: "API Route not found",
+    statusCode: 404,
+  });
+});
+
+// Local Listener
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 8000;
   app.listen(PORT, () => {
-    console.log(`log> Server running locally on port ${PORT}`);
+    console.log(`log> API Server running locally on port ${PORT}`);
   });
 }
 
@@ -88,5 +98,4 @@ process.on("unhandledRejection", (err) => {
   if (!process.env.VERCEL) process.exit(1);
 });
 
-// Export for Vercel
 export default app;
