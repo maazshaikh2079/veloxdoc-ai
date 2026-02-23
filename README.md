@@ -9,7 +9,7 @@ Login<br/>
 Email: dummy@demo.com<br/>
 Password: dummy1234<br/>
 
-Live: <a href="https://veloxdoc-ai.onrender.com">veloxdoc-ai.onrender.com</a>
+Live: <a href="https://veloxdoc-ai.vercel.app">veloxdoc-ai.vercel.app</a>
 
 ## How it Works
 
