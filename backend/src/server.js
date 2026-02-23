@@ -3,8 +3,6 @@ dotenv.config();
 
 import express from "express";
 import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
 import morgan from "morgan";
 import mongoose from "mongoose";
 
@@ -19,10 +17,14 @@ import aiRouter from "./routes/ai.routes.js";
 import quizRouter from "./routes/quiz.routes.js";
 import progressRouter from "./routes/progress.routes.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
+
+app.get("/favicon.ico", (req, res) => res.status(204).end());
+app.use((req, res, next) => {
+  console.log(`Request received: ${req.method} ${req.url}`);
+  next();
+});
 
 // Disable buffering so queries fail if DB isn't connected
 mongoose.set("bufferCommands", false);
@@ -60,9 +62,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
-// Static files
-app.use(express.static(path.join(__dirname, "../dist")));
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // API Routes
 app.use("/api/auth", authRouter);
@@ -74,11 +73,6 @@ app.use("/api/progress", progressRouter);
 
 // Error Handling
 app.use(errorHandler);
-
-// React Router Fallback
-app.get(/^(.*)$/, (req, res) => {
-  res.sendFile(path.join(__dirname, "../dist/index.html"));
-});
 
 // Local Listener (Only runs when NOT on Vercel)
 if (!process.env.VERCEL) {
