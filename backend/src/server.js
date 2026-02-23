@@ -1,6 +1,12 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+// import { DOMMatrix, ImageData, Path2D } from "canvas";
+
+// global.DOMMatrix = DOMMatrix;
+// global.ImageData = ImageData;
+// global.Path2D = Path2D;
+
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
@@ -75,7 +81,7 @@ app.get("/", (req, res) => {
 // Error Handling
 app.use(errorHandler);
 
-// API 404 Handler 
+// API 404 Handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
