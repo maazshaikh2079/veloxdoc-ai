@@ -61,6 +61,8 @@ export const generateFlashcards = async (req, res, next) => {
       message: "Flashcards generated successfully",
     });
   } catch (error) {
+    console.log(error);
+
     next(error);
   }
 };

@@ -2,17 +2,22 @@ import mongoose from "mongoose";
 import fs from "fs/promises";
 
 import Document from "../models/document.model.js";
+import ChatHistory from "../models/chathistory.model.js";
 import Flashcard from "../models/flashcard.model.js";
 import Quiz from "../models/quiz.model.js";
 import { extractTextFromPDF } from "../utils/pdf-parser.js";
 import { chunkText } from "../utils/text-chunker.js";
+import {
+  uploadOnCloudinary,
+  deleteFromCloudinary,
+} from "../utils/cloudinary.js";
 
 // @desc    Upload PDF document
 // @route   POST /api/documents/upload
 // @access  Private
 export const uploadDocument = async (req, res, next) => {
   try {
-    if (!req.file) {
+    if (!req.file || !req.file.buffer) {
       return res.status(400).json({
         success: false,
         error: "Please upload a PDF file",
@@ -23,7 +28,6 @@ export const uploadDocument = async (req, res, next) => {
     const { title } = req.body;
 
     if (!title) {
-      await fs.unlink(req.file.path);
       return res.status(400).json({
         success: false,
         error: "Please provide a document title",
@@ -31,22 +35,22 @@ export const uploadDocument = async (req, res, next) => {
       });
     }
 
-    // Construct the URL for the uploaded file
-    const baseUrl = process.env.BASE_URL;
-    const fileUrl = `${baseUrl}/uploads/documents/${req.file.filename}`;
+    // Upload the file to Cloudinary
+    const cloudinaryResult = await uploadOnCloudinary(req.file.buffer);
+    const fileUrl = cloudinaryResult.secure_url;
 
     // Create document record
     const document = await Document.create({
       userId: req.user._id,
       title,
       fileName: req.file.originalname,
-      filePath: fileUrl, // Store the URL instead of the local path
+      filePath: fileUrl,
       fileSize: req.file.size,
       status: "processing",
     });
 
-    // Process PDF in background (in production, use a queue like Bull)
-    processPDF(document._id, req.file.path).catch((err) => {
+    // Process PDF in background
+    processPDF(document._id, req.file.buffer).catch((err) => {
       console.error("log> ERROR PDF processing error:", err);
     });
 
@@ -56,17 +60,14 @@ export const uploadDocument = async (req, res, next) => {
       message: "Document uploaded successfully. Processing in progress...",
     });
   } catch (error) {
-    // Clean up file on error
-    req.file && (await fs.unlink(req.file.path).catch(() => {}));
-
     next(error);
   }
 };
 
 // Helper function to process PDF
-const processPDF = async (documentId, filePath) => {
+const processPDF = async (documentId, fileSource) => {
   try {
-    const { text } = await extractTextFromPDF(filePath);
+    const { text } = await extractTextFromPDF(fileSource);
 
     // Create chunks
     const chunks = chunkText(text, 500, 50);
@@ -198,10 +199,14 @@ export const getDocument = async (req, res, next) => {
 // @route   DELETE /api/documents/:documentId
 // @access  Private
 export const deleteDocument = async (req, res, next) => {
+  let session;
+  const documentId = req.params.documentId;
+  const userId = req.user._id;
+
   try {
     const document = await Document.findOne({
-      _id: req.params.documentId,
-      userId: req.user._id,
+      _id: documentId,
+      userId: userId,
     });
 
     if (!document) {
@@ -212,17 +217,36 @@ export const deleteDocument = async (req, res, next) => {
       });
     }
 
-    // Delete file from filesystem
-    await fs.unlink(document.filePath).catch(() => {});
+    session = await mongoose.startSession();
+    session.startTransaction();
 
-    // Delete document
-    await document.deleteOne();
+    await Promise.all([
+      ChatHistory.deleteMany({ userId, documentId }, { session }),
+      Flashcard.deleteMany({ userId, documentId }, { session }),
+      Quiz.deleteMany({ userId, documentId }, { session }),
+      document.deleteOne({ session }),
+    ]);
+
+    // Commit the DB changes first
+    await session.commitTransaction();
+    session.endSession();
+
+    try {
+      await deleteFromCloudinary(document.filePath);
+    } catch (cloudinaryError) {
+      console.error("log> Cloudinary cleanup failed:", cloudinaryError.message);
+    }
 
     res.status(200).json({
-      succcess: true,
+      success: true, // Fixed spelling
       message: `Document deleted successfully`,
     });
   } catch (error) {
+    if (session) {
+      await session.abortTransaction();
+      session.endSession();
+    }
+    console.error("log> Delete Document Error:", error);
     next(error);
   }
 };
